@@ -1,0 +1,52 @@
+name: Build Onion
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Onion
+    runs-on: ubuntu-latest
+    container:
+      image: aemiii91/miyoomini-toolchain:latest
+      options: --user root
+    env:
+      REPOSITORY: "OnionUI/Onion"
+      BRANCH: "main"
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ env.REPOSITORY }}
+        ref: ${{ env.BRANCH }}
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Configure git
+      run: git config --global --add safe.directory /__w/Onion/Onion
+
+    - name: Configure variables
+      run: |
+        echo "BUILD_VERSION=$(make version)" >> $GITHUB_ENV
+        echo "ONION_VERSION=$(make version)-$(TZ=UTC date +%Y%m%d)" >> $GITHUB_ENV
+
+    - name: Build Onion-v${{ env.ONION_VERSION }}
+      shell: bash
+      run: |
+        source /root/.bashrc
+        VERSION_OVERRIDE=${{ env.ONION_VERSION }} make release
+
+    - name: Publish release
+      uses: marvinpinto/action-automatic-releases@latest
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        automatic_release_tag: latest
+        title: "Onion V${{ env.BUILD_VERSION }}"
+        files: release/Onion-v${{ env.ONION_VERSION }}.zip
+
+  purge:
+    uses: filterpaper/scripts/.github/workflows/purge-workflow.yml@main
+    with:
+      purge-age: 3
+      delete-all-completed: false
+      delete-all-incomplete: false
