@@ -2,6 +2,10 @@ name: Build Onion
 on:
   workflow_dispatch:
 
+env:
+  REPOSITORY: "OnionUI/Onion"
+  BRANCH: "main"
+
 jobs:
   build:
     name: Build Onion
@@ -9,10 +13,6 @@ jobs:
     container:
       image: aemiii91/miyoomini-toolchain:latest
       options: --user root
-    env:
-      REPOSITORY: "OnionUI/Onion"
-      BRANCH: "main"
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -25,10 +25,8 @@ jobs:
     - name: Configure git
       run: git config --global --add safe.directory /__w/Onion/Onion
 
-    - name: Setup variables
-      run: |
-        echo "BUILD_VERSION=$(make version)" >> $GITHUB_ENV
-        echo "ONION_VERSION=$(make version)-$(TZ=UTC date +%Y%m%d)" >> $GITHUB_ENV
+    - name: Setup build variable
+      run: echo "BUILD_VERSION=$(make version)" >> $GITHUB_ENV
 
     - name: Configure emulator defaults
       run: |
@@ -44,20 +42,25 @@ jobs:
         echo 'video_filter = ":/.retroarch/filters/video/Upscale/Scale2x.filt"' >> static/configs/Saves/CurrentProfile/config/Supafaust/Supafaust.cfg
         echo 'video_scale_integer = "true"' >> static/configs/Saves/CurrentProfile/config/Supafaust/Supafaust.cfg
 
-    - name: Build Onion-v${{ env.ONION_VERSION }}
+    - name: Build Onion-v${{ env.BUILD_VERSION }}
       shell: bash
       run: |
         source /root/.bashrc
         VERSION_OVERRIDE=${{ env.BUILD_VERSION }} make release
-        #VERSION_OVERRIDE=${{ env.ONION_VERSION }} make release
 
-    - name: Publish release
-      uses: marvinpinto/action-automatic-releases@latest
+    - name: Upload release
+      uses: actions/upload-artifact@main
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        automatic_release_tag: latest
-        title: "Onion V${{ env.BUILD_VERSION }}"
-        files: release/Onion-v${{ env.ONION_VERSION }}.zip
+        retention-days: 1
+        name: Onion-v${{ env.BUILD_VERSION }}
+        path: release/Onion-v${{ env.BUILD_VERSION }}.zip
+
+  release:
+    needs: build
+    uses: filterpaper/scripts/.github/workflows/publish-artifact.yml@main
+    with:
+      release_name: OnionOS
+      release_tag: latest
 
   purge:
     uses: filterpaper/scripts/.github/workflows/purge-workflow.yml@main
