@@ -25,16 +25,31 @@ jobs:
     - name: Configure git
       run: git config --global --add safe.directory /__w/Onion/Onion
 
-    - name: Configure variables
+    - name: Setup variables
       run: |
         echo "BUILD_VERSION=$(make version)" >> $GITHUB_ENV
         echo "ONION_VERSION=$(make version)-$(TZ=UTC date +%Y%m%d)" >> $GITHUB_ENV
+
+    - name: Configure emulator defaults
+      run: |
+        echo "1600" > static/configs/RetroArch/cpuclock.txt
+        sed -i 's/cpuclock 1500/cpuclock 1600/g' static/packages/Emu/Nintendo\ -\ DS\ \(Drastic\)/Emu/NDS/launch.sh
+        sed -i 's/"theme":0,/"theme":7,/g' static/packages/Emu/Nintendo\ -\ DS\ \(Drastic\)/Emu/NDS/resources/settings.json
+        sed -i 's/quick_menu_show_cheats = "false"/quick_menu_show_cheats = "true"/g' static/configs/RetroArch/.retroarch/retroarch.cfg
+        sed -i 's/apply_cheats_after_load = "false"/apply_cheats_after_load = "true"/g' static/configs/RetroArch/.retroarch/retroarch.cfg
+        sed -i 's/apply_cheats_after_toggle = "false"/apply_cheats_after_toggle = "true"/g' static/configs/RetroArch/.retroarch/retroarch.cfg
+        sed -i 's/pcsx_rearmed_dithering = "disabled"/pcsx_rearmed_dithering = "enabled"/g' static/configs/Saves/CurrentProfile/config/PCSX-ReARMed/PCSX-ReARMed.opt
+        sed -i 's/gpsp_color_correction = "disabled"/gpsp_color_correction = "enabled"/g' static/configs/Saves/CurrentProfile/config/gpSP/gpSP.opt
+        echo 'video_filter = ":/.retroarch/filters/video/Normal/Normal2x.filt"' >> static/configs/Saves/CurrentProfile/config/gpSP/gpSP.cfg
+        echo 'video_filter = ":/.retroarch/filters/video/Upscale/Scale2x.filt"' >> static/configs/Saves/CurrentProfile/config/Supafaust/Supafaust.cfg
+        echo 'video_scale_integer = "true"' >> static/configs/Saves/CurrentProfile/config/Supafaust/Supafaust.cfg
 
     - name: Build Onion-v${{ env.ONION_VERSION }}
       shell: bash
       run: |
         source /root/.bashrc
-        VERSION_OVERRIDE=${{ env.ONION_VERSION }} make release
+        VERSION_OVERRIDE=${{ env.BUILD_VERSION }} make release
+        #VERSION_OVERRIDE=${{ env.ONION_VERSION }} make release
 
     - name: Publish release
       uses: marvinpinto/action-automatic-releases@latest
