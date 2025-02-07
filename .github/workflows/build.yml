@@ -16,7 +16,7 @@ jobs:
       options: --user root
 
     steps:
-    - name: Checkout repository
+    - name: Checkout OnionOS
       uses: actions/checkout@v3
       with:
         repository: ${{ env.REPOSITORY }}
@@ -27,8 +27,13 @@ jobs:
     - name: Configure git
       run: git config --global --add safe.directory /__w/Onion/Onion
 
-    - name: Setup build variable
-      run: echo "BUILD_VERSION=$(make version)" >> $GITHUB_ENV
+    - name: Checkout build repository
+      uses: actions/checkout@main
+      with:
+        path: custom
+
+    - name: Copy custom files
+      run: cp -rv custom/overlay/* static/build/RetroArch/.retroarch/overlay/
 
     - name: Configure Drastic defaults
       env:
@@ -58,7 +63,7 @@ jobs:
         cat << EOF >> $CFG_FILE && sort -o $CFG_FILE $CFG_FILE
         input_overlay_opacity = "0.500000"
         video_filter = ":/.retroarch/filters/video/Normal/Normal3x.filt"
-        input_overlay = ":/.retroarch/overlay/GBA/GBA_REAL_3x-clean.cfg"
+        input_overlay = ":/.retroarch/overlay/GBA/Perfect_GBA-centered.cfg"
         EOF
         sed -i 's/gpsp_color_correction.*/gpsp_color_correction = "enabled"/' $OPT_FILE
 
@@ -84,6 +89,9 @@ jobs:
         video_filter = ":/.retroarch/filters/video/Normal/Normal2x.filt"
         input_overlay = ":/.retroarch/overlay/4-3/CRT/Perfect_CRT(read-instructions)/Perfect_CRT-noframe.cfg"
         EOF
+
+    - name: Setup build variable
+      run: echo "BUILD_VERSION=$(make version)" >> $GITHUB_ENV
 
     - name: Build Onion-v${{ env.BUILD_VERSION }}
       shell: bash
