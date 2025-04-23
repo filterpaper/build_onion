@@ -1,6 +1,8 @@
 name: Build Onion
 on:
   push:
+  schedule:
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 env:
@@ -17,7 +19,7 @@ jobs:
 
     steps:
     - name: Checkout OnionOS
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: ${{ env.REPOSITORY }}
         ref: ${{ env.BRANCH }}
@@ -27,33 +29,33 @@ jobs:
     - name: Configure git
       run: git config --global --add safe.directory /__w/Onion/Onion
 
-    - name: Checkout build repository
-      uses: actions/checkout@main
-      with:
-        path: custom
-
-    - name: Copy custom files
-      run: cp -rv custom/overlay/* static/build/RetroArch/.retroarch/overlay/
-
     - name: Configure Drastic defaults
       env:
         DS_PATH: static/packages/Emu/Nintendo - DS (Drastic)/Emu/NDS
       run: |
         sed -i 's/cpuclock 1500/cpuclock 1600/' "$DS_PATH/launch.sh"
-        sed -i 's/"theme":./"theme":7/'   "$DS_PATH/resources/settings.json"
-        sed -i 's/"mode":./"mode":1/'     "$DS_PATH/resources/settings.json"
-        sed -i 's/"alpha":./"alpha":5/'   "$DS_PATH/resources/settings.json"
-        sed -i 's/"border":./"border":5/' "$DS_PATH/resources/settings.json"
+        sed -i \
+            -e 's/"theme":./"theme":7/' \
+            -e 's/"mode":./"mode":1/' \
+            -e 's/"alpha":./"alpha":5/' \
+            -e 's/"border":./"border":5/' \
+            -e 's/states\\\/Drastic/saves/' \
+            "$DS_PATH/resources/settings.json"
 
     - name: Configure Retroarch defaults
       env:
         RA_FILE: static/configs/RetroArch/.retroarch/retroarch.cfg
       run: |
         echo "1600" > static/configs/RetroArch/cpuclock.txt
-        sed -i 's/content_runtime_log.*/content_runtime_log = "false"/'            $RA_FILE
-        sed -i 's/quick_menu_show_cheats.*/quick_menu_show_cheats = "true"/'       $RA_FILE
-        sed -i 's/apply_cheats_after_load.*/apply_cheats_after_load = "true"/'     $RA_FILE
-        sed -i 's/apply_cheats_after_toggle.*/apply_cheats_after_toggle = "true"/' $RA_FILE
+        sed -i \
+            -e 's/content_runtime_log.*/content_runtime_log = "false"/' \
+            -e 's/quick_menu_show_cheats.*/quick_menu_show_cheats = "true"/' \
+            -e 's/apply_cheats_after_load.*/apply_cheats_after_load = "true"/' \
+            -e 's/apply_cheats_after_toggle.*/apply_cheats_after_toggle = "true"/' \
+            -e 's/notification_show_save_state.*/notification_show_save_state = "false"/' \
+            -e 's/sort_savefiles_enable.*/sort_savefiles_enable = "false"/' \
+            -e 's/sort_savestates_enable.*/sort_savestates_enable = "false"/' \
+            $RA_FILE
 
     - name: Configure gpSP overrides
       env:
@@ -61,9 +63,9 @@ jobs:
         OPT_FILE: static/configs/Saves/CurrentProfile/config/gpSP/gpSP.opt
       run: |
         cat << EOF >> $CFG_FILE && sort -o $CFG_FILE $CFG_FILE
-        input_overlay_opacity = "0.500000"
+        input_overlay_opacity = "0.600000"
         video_filter = ":/.retroarch/filters/video/Normal/Normal3x.filt"
-        input_overlay = ":/.retroarch/overlay/GBA/Perfect_GBA-centered.cfg"
+        input_overlay = ":/.retroarch/overlay/GBA/Perfect_GBA(read-instructions)/Perfect_GBA-centered.cfg"
         EOF
         sed -i 's/gpsp_color_correction.*/gpsp_color_correction = "enabled"/' $OPT_FILE
 
@@ -93,7 +95,7 @@ jobs:
         sed -i 's/mednafen_supafaust_/snes9x_/' "$EMU_FILE"
 
     - name: Setup build variable
-      run: echo "BUILD_VERSION=$(make version)" >> $GITHUB_ENV
+      run: echo "BUILD_VERSION=$(make version | sed 's/-.*//')" >> $GITHUB_ENV
 
     - name: Build Onion-v${{ env.BUILD_VERSION }}
       shell: bash
@@ -102,7 +104,7 @@ jobs:
         VERSION_OVERRIDE=${{ env.BUILD_VERSION }} make release
 
     - name: Upload release
-      uses: actions/upload-artifact@main
+      uses: actions/upload-artifact@v4
       with:
         retention-days: 1
         name: Onion-v${{ env.BUILD_VERSION }}
