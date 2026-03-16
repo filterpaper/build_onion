@@ -19,7 +19,7 @@ jobs:
 
     steps:
     - name: Checkout OnionOS
-      uses: actions/checkout@v4
+      uses: actions/checkout@main
       with:
         repository: ${{ env.REPOSITORY }}
         ref: ${{ env.BRANCH }}
@@ -104,7 +104,7 @@ jobs:
         VERSION_OVERRIDE=${{ env.BUILD_VERSION }} make release
 
     - name: Upload release
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@main
       with:
         retention-days: 1
         name: Onion-v${{ env.BUILD_VERSION }}
